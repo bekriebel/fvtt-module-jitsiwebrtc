@@ -92,15 +92,15 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
   async getVideoFilter() {
-    if (this._videofilter) return await this._videofilter.getVideoFilter();
+    if (this._videofilter) return this._videofilter.getVideoFilter();
 
     return [];
   }
 
   async initialize() {
     const { mode } = this._settings.worldSettings;
-    this._withAudio = ((mode == 1) || (mode == 3));
-    this._withVideo = ((mode == 2) || (mode == 3));
+    this._withAudio = ((mode === 1) || (mode === 3));
+    this._withVideo = ((mode === 2) || (mode === 3));
 
     this.debug('initialize withAudio: ', this._withAudio, ' withVideo: ', this._withVideo);
 
@@ -122,12 +122,7 @@ class JitsiRTCClient extends WebRTCInterface {
    * @param {string} password        ignored
    * @return {Promise.boolean}       Returns success/failure to connect
    */
-  async connect({
-    host,
-    room,
-    username,
-    password,
-  } = {}) {
+  async connect() {
     return new Promise((resolve) => {
       jitsirtc = new JitsiMeetJS.JitsiConnection(null, null, this._options);
 
@@ -153,9 +148,9 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
   uiUpdateNeeded() {
-    if (ui.webrtc && (ui.webrtc._state == 1)) {
+    if (ui.webrtc && (ui.webrtc._state === 1)) {
       setTimeout(() => {
-        game.webrtc.client.uiUpdateNeeded();
+        this.uiUpdateNeeded();
       }, 2000);
     } else {
       ui.webrtc.render(true);
@@ -210,7 +205,9 @@ class JitsiRTCClient extends WebRTCInterface {
     client.debug('remote track type ', track.getType(), ' removed for participant ', participant);
 
     if (client._remoteTracks[participant] != null) {
-      client._remoteTracks[participant] = client._remoteTracks[participant].filter((value, index, arr) => value.ssrc != track.ssrc);
+      client._remoteTracks[participant] = client._remoteTracks[participant].filter(
+        (value) => value.ssrc !== track.ssrc,
+      );
 
       const userId = client._idCache[participant];
 
