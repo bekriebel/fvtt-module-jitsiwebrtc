@@ -1,15 +1,14 @@
-
 let jitsirtc = null;
-			
+
 class JitsiWebRTC extends WebRTC {
-	constructor(settings) {
-		super(settings);
+  constructor(settings) {
+    super(settings);
 
   }
 
   async initialize() {
-    await this.client.initialize();	
-	return this.connect(this);
+    await this.client.initialize();
+    return this.connect(this);
   }
 }
 
@@ -24,63 +23,63 @@ class JitsiRTCClient extends WebRTCInterface {
   constructor(webrtc, settings) {
     super(webrtc, settings);
 
-	this._roomhandle = null;
-	this._remoteTracks = {};
-	this._videofilter = null;
+    this._roomhandle = null;
+    this._remoteTracks = {};
+    this._videofilter = null;
 
-	this._settings = settings;
-	
-	const server = this._settings["worldSettings"]["server"];
-	this._room = this._settings["worldSettings"]["server"]["room"];
-	
-	if (server["type"] == "FVTT") {
-		this._options = {
-			hosts: {
-				domain: 'beta.meet.jit.si',
-				muc: 'conference.beta.meet.jit.si'
-			},
-			bosh: '//beta.meet.jit.si/http-bind',
-			clientNode: 'http://beta.meet.jit.si'
-		};
-		this._auth = {}
-	} else {
-		var mucUrl = game.settings.get('jitsiwebrtc', 'mucUrl');
-		var focusUrl = game.settings.get('jitsiwebrtc', 'focusUrl');
-		var boshUrl = game.settings.get('jitsiwebrtc', 'boshUrl');
+    this._settings = settings;
 
-		// Setup defaults if undefined
-		if (mucUrl === '' || mucUrl === 'undefined') {
-			mucUrl = 'conference.' + server["url"]
-			game.settings.set('jitsiwebrtc', 'mucUrl', mucUrl);
-		}
-		if (focusUrl === '' || focusUrl === 'undefined') {
-			focusUrl = 'focus.' + server["url"]
-			game.settings.set('jitsiwebrtc', 'focusUrl', focusUrl);
-		}
-		if (boshUrl === '' || boshUrl === 'undefined') {
-			boshUrl = '//' + server["url"] + '/http-bind'
-			game.settings.set('jitsiwebrtc', 'boshUrl', boshUrl);
-		}
+    const server = this._settings["worldSettings"]["server"];
+    this._room = this._settings["worldSettings"]["server"]["room"];
 
-		this._options = {
-			hosts: {
-				domain: server["url"],
-				muc: mucUrl,
-				focus: focusUrl,
-			},
-			bosh: boshUrl,
-			clientNode: 'http://jitsi.org/jitsimeet',
-		};
-		this._auth = {
-			id: server["username"],
-			password: server["password"]
-		}
-	}
-    
+    if (server["type"] == "FVTT") {
+      this._options = {
+        hosts: {
+          domain: 'beta.meet.jit.si',
+          muc: 'conference.beta.meet.jit.si'
+        },
+        bosh: '//beta.meet.jit.si/http-bind',
+        clientNode: 'http://beta.meet.jit.si'
+      };
+      this._auth = {}
+    } else {
+      var mucUrl = game.settings.get('jitsiwebrtc', 'mucUrl');
+      var focusUrl = game.settings.get('jitsiwebrtc', 'focusUrl');
+      var boshUrl = game.settings.get('jitsiwebrtc', 'boshUrl');
+
+      // Setup defaults if undefined
+      if (mucUrl === '' || mucUrl === 'undefined') {
+        mucUrl = 'conference.' + server["url"]
+        game.settings.set('jitsiwebrtc', 'mucUrl', mucUrl);
+      }
+      if (focusUrl === '' || focusUrl === 'undefined') {
+        focusUrl = 'focus.' + server["url"]
+        game.settings.set('jitsiwebrtc', 'focusUrl', focusUrl);
+      }
+      if (boshUrl === '' || boshUrl === 'undefined') {
+        boshUrl = '//' + server["url"] + '/http-bind'
+        game.settings.set('jitsiwebrtc', 'boshUrl', boshUrl);
+      }
+
+      this._options = {
+        hosts: {
+          domain: server["url"],
+          muc: mucUrl,
+          focus: focusUrl,
+        },
+        bosh: boshUrl,
+        clientNode: 'http://jitsi.org/jitsimeet',
+      };
+      this._auth = {
+        id: server["username"],
+        password: server["password"]
+      }
+    }
+
     this._usernameCache = {};
-	this._idCache = {};
-	this._withAudio = false;
-	this._withVideo = false;
+    this._idCache = {};
+    this._withAudio = false;
+    this._withVideo = false;
   }
 
   /**
@@ -93,50 +92,50 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
   getLocalTracks() {
-	if (this._roomhandle) 
-		 return this._roomhandle.getLocalTracks();
-	return [];
+    if (this._roomhandle)
+      return this._roomhandle.getLocalTracks();
+    return [];
   }
 
   getFilterCanvas() {
-	if (this._videofilter)
-		return this._videofilter.getFilterCanvas();
-	return null;
+    if (this._videofilter)
+      return this._videofilter.getFilterCanvas();
+    return null;
   }
 
   hasActiveFilter() {
-	if (this._videofilter)
-		return this._videofilter.hasActiveFilter();
-	
-	return false;
+    if (this._videofilter)
+      return this._videofilter.hasActiveFilter();
+
+    return false;
   }
 
   setVideoFilter(filter) {
-	  this._videofilter = filter;
+    this._videofilter = filter;
   }
 
   async getVideoFilter() {
-	if (this._videofilter)
-		return await this._videofilter.getVideoFilter();
-	
-	return [];
+    if (this._videofilter)
+      return await this._videofilter.getVideoFilter();
+
+    return [];
   }
 
-    async initialize() {
-		
-		const mode = this._settings["worldSettings"]["mode"];
-		this._withAudio = ( (mode == 1) || (mode == 3));
-		this._withVideo = ( (mode == 2) || (mode == 3));
+  async initialize() {
 
-		this.debug("initialize withAudio: ",this._withAudio," withVideo: ", this._withVideo);
-		
-		if (game.webrtc.client._withAudio || game.webrtc.client._withVideo) {	
-			JitsiMeetJS.init(game.webrtc.client._options);	
-			JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.ERROR);
-			this.debug("JitsiMeetJS init with options ",game.webrtc.client._options);
-		}
+    const mode = this._settings["worldSettings"]["mode"];
+    this._withAudio = ((mode == 1) || (mode == 3));
+    this._withVideo = ((mode == 2) || (mode == 3));
 
-		return true;
+    this.debug("initialize withAudio: ", this._withAudio, " withVideo: ", this._withVideo);
+
+    if (game.webrtc.client._withAudio || game.webrtc.client._withVideo) {
+      JitsiMeetJS.init(game.webrtc.client._options);
+      JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.ERROR);
+      this.debug("JitsiMeetJS init with options ", game.webrtc.client._options);
+    }
+
+    return true;
   }
 
   /**
@@ -148,177 +147,183 @@ class JitsiRTCClient extends WebRTCInterface {
    * @param {string} password        ignored
    * @return {Promise.boolean}       Returns success/failure to connect
    */
-  async connect({ host, room, username, password } = {}) {
-     return new Promise( (resolve) => {
-     	 
-		jitsirtc = new JitsiMeetJS.JitsiConnection(null, null,this._options);
-		
-		this.debug("Connection created with options ",this._options);
-    
-		jitsirtc.addEventListener(
-			JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED,
-			this._loginSuccess.bind(this, resolve));
-		jitsirtc.addEventListener(
-			JitsiMeetJS.events.connection.CONNECTION_FAILED,
-			this._loginFailure.bind(this, resolve));
-		jitsirtc.addEventListener(
-			JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED,
-			this._onDisconnect.bind(this, resolve));
-		
-		jitsirtc.connect(this._auth);
+  async connect({
+    host,
+    room,
+    username,
+    password
+  } = {}) {
+    return new Promise((resolve) => {
 
-		this.debug("Async call to connect started.");
-    
+      jitsirtc = new JitsiMeetJS.JitsiConnection(null, null, this._options);
+
+      this.debug("Connection created with options ", this._options);
+
+      jitsirtc.addEventListener(
+        JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED,
+        this._loginSuccess.bind(this, resolve));
+      jitsirtc.addEventListener(
+        JitsiMeetJS.events.connection.CONNECTION_FAILED,
+        this._loginFailure.bind(this, resolve));
+      jitsirtc.addEventListener(
+        JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED,
+        this._onDisconnect.bind(this, resolve));
+
+      jitsirtc.connect(this._auth);
+
+      this.debug("Async call to connect started.");
+
     });
   }
-  
+
   uiUpdateNeeded() {
-	  if (ui.webrtc && (ui.webrtc._state == 1)) {
+    if (ui.webrtc && (ui.webrtc._state == 1)) {
 
-		  setTimeout( function() { 
-			game.webrtc.client.uiUpdateNeeded();			
-		  
-		  }, 2000);
-	  } else {		 
+      setTimeout(function () {
+        game.webrtc.client.uiUpdateNeeded();
 
-		  ui.webrtc.render(true);
-	  }
+      }, 2000);
+    } else {
+
+      ui.webrtc.render(true);
+    }
   }
-  
-	/**
-	 * Handles incoming remote track
-	 * @param track JitsiTrack object
-	 */
-	 _onRemoteTrack(track) {
-		
-		if (track.isLocal()) {
-			return;
-		}
-		const participant = track.getParticipantId();
-		const client = game.webrtc.client;
-		
-		client.debug("remote track type ",track.getType(), " from participant " , participant, " added.");
-    
-		if (client._remoteTracks[participant] == null) 
-			client._remoteTracks[participant] = [];
-		
-		client._remoteTracks[participant].push(track);
-		const userId = client._idCache[participant];
-					
-		if (userId != null) { 
-				
-				if (track.getType() === "video") {
-					client.debug("onUserVideoStreamChange called after remote track added for UserId",userId);
-					game.webrtc.onUserVideoStreamChange( userId,client.getRemoteStreamForId(participant));
-				}
-				if (track.getType() === "audio") {
-					client.debug("onUserAudioStreamChange called after remote track added for UserId",userId);
-					game.webrtc.onUserAudioStreamChange( userId,client.getRemoteStreamForId(participant));
-				}
-		
-		} else {
-			client.debug("Remote track of unknown participant ", participant, " added.");
-		}
-		client.debug("remote track add finished, type: ", track.getType(), " participant: " , participant);
-	}
+
+  /**
+   * Handles incoming remote track
+   * @param track JitsiTrack object
+   */
+  _onRemoteTrack(track) {
+
+    if (track.isLocal()) {
+      return;
+    }
+    const participant = track.getParticipantId();
+    const client = game.webrtc.client;
+
+    client.debug("remote track type ", track.getType(), " from participant ", participant, " added.");
+
+    if (client._remoteTracks[participant] == null)
+      client._remoteTracks[participant] = [];
+
+    client._remoteTracks[participant].push(track);
+    const userId = client._idCache[participant];
+
+    if (userId != null) {
+
+      if (track.getType() === "video") {
+        client.debug("onUserVideoStreamChange called after remote track added for UserId", userId);
+        game.webrtc.onUserVideoStreamChange(userId, client.getRemoteStreamForId(participant));
+      }
+      if (track.getType() === "audio") {
+        client.debug("onUserAudioStreamChange called after remote track added for UserId", userId);
+        game.webrtc.onUserAudioStreamChange(userId, client.getRemoteStreamForId(participant));
+      }
+
+    } else {
+      client.debug("Remote track of unknown participant ", participant, " added.");
+    }
+    client.debug("remote track add finished, type: ", track.getType(), " participant: ", participant);
+  }
 
 
-	/**
-	 * Handles incoming lost remote track
-	 * @param track JitsiTrack object
-	 */
-	 _onRemoteTrackRemove(track) {
-		
-		if (track.isLocal()) {
-			return;
-		}
-		
-		const participant = track.getParticipantId();
-		const client = game.webrtc.client;
-		client.debug("remote track type ",track.getType()," removed for participant ", participant);
-		
-		if (client._remoteTracks[participant] != null) {		
+  /**
+   * Handles incoming lost remote track
+   * @param track JitsiTrack object
+   */
+  _onRemoteTrackRemove(track) {
 
-			client._remoteTracks[participant] = client._remoteTracks[participant].filter(function(value, index, arr){ 
-				return value.ssrc != track.ssrc;});
-			
-			const userId = client._idCache[participant];
-			
-			if (userId != null) { 
-					
-					if (track.getType() === "video") {
-						client.debug("onUserVideoStreamChange called after remote track removed for participant",participant);
-						game.webrtc.onUserVideoStreamChange( userId,client.getRemoteStreamForId(participant));
-					}
-					if (track.getType() === "audio") {
-						client.debug("onUserAudioStreamChange called after remote track removed for participant",participant);
-						game.webrtc.onUserAudioStreamChange( userId,client.getRemoteStreamForId(participant));
-					}					
-			}
-		}
-	}
+    if (track.isLocal()) {
+      return;
+    }
 
-	getRemoteStreamForId(id) {
-		let stream = new MediaStream();
-		const tracks = game.webrtc.client._remoteTracks[id];
+    const participant = track.getParticipantId();
+    const client = game.webrtc.client;
+    client.debug("remote track type ", track.getType(), " removed for participant ", participant);
 
-		if (tracks) {
-			for (let i = 0; i <  tracks.length; i++) {		
-				stream.addTrack(tracks[i].track);	
-			}
-			game.webrtc.enableStreamVideo(stream);
-			return stream;
-		}
-		return null;
-	}
- 
-	getRemoteStreamForUserId(userId) {
-		const id = game.webrtc.client._usernameCache[userId];
-		if (id != null) {
-			return game.webrtc.client.getRemoteStreamForId( id );
-		} 
-		return null;
-	}
-	
-	getStreamForUser(userId) {
-		if (userId === game.userId) { 
-			let stream = new MediaStream();
-			const tracks = game.webrtc.client.getLocalTracks();
-	
-			for (let i = 0; i <  tracks.length; i++) {		
-				stream.addTrack(tracks[i].track);	
-			}	
-			return stream;
+    if (client._remoteTracks[participant] != null) {
 
-		}
-		return this.getRemoteStreamForUserId(userId);
-   }
+      client._remoteTracks[participant] = client._remoteTracks[participant].filter(function (value, index, arr) {
+        return value.ssrc != track.ssrc;
+      });
 
-	async _onLocalTracks(resolve,tracks) {
-		
-		for (let i = 0; i <  tracks.length; i++) {
-			const track = tracks[i];
-	
-			track.enabled = true;
-			track.track.enabled = true;
-			await game.webrtc.client._roomhandle.addTrack(track);	
+      const userId = client._idCache[participant];
 
-			this.debug("local track ", track, " added.");
+      if (userId != null) {
 
-			if (  (track.getType() === "audio") && 
-				(  (game.webrtc.settings.voiceMode === "ptt") || this.settings.users[game.user.id].muted)) {				
-				game.webrtc.disableStreamAudio(this.getStreamForUser(game.userId));
-			} else if ((track.getType() === "video") && (this.settings.users[game.user.id].hidden)) {
-				game.webrtc.disableStreamVideo(this.getStreamForUser(game.userId));
-			}
+        if (track.getType() === "video") {
+          client.debug("onUserVideoStreamChange called after remote track removed for participant", participant);
+          game.webrtc.onUserVideoStreamChange(userId, client.getRemoteStreamForId(participant));
+        }
+        if (track.getType() === "audio") {
+          client.debug("onUserAudioStreamChange called after remote track removed for participant", participant);
+          game.webrtc.onUserAudioStreamChange(userId, client.getRemoteStreamForId(participant));
+        }
+      }
+    }
+  }
 
-		}
+  getRemoteStreamForId(id) {
+    let stream = new MediaStream();
+    const tracks = game.webrtc.client._remoteTracks[id];
 
-		resolve(this.getStreamForUser(game.userId));
-   } 
-   
+    if (tracks) {
+      for (let i = 0; i < tracks.length; i++) {
+        stream.addTrack(tracks[i].track);
+      }
+      game.webrtc.enableStreamVideo(stream);
+      return stream;
+    }
+    return null;
+  }
+
+  getRemoteStreamForUserId(userId) {
+    const id = game.webrtc.client._usernameCache[userId];
+    if (id != null) {
+      return game.webrtc.client.getRemoteStreamForId(id);
+    }
+    return null;
+  }
+
+  getStreamForUser(userId) {
+    if (userId === game.userId) {
+      let stream = new MediaStream();
+      const tracks = game.webrtc.client.getLocalTracks();
+
+      for (let i = 0; i < tracks.length; i++) {
+        stream.addTrack(tracks[i].track);
+      }
+      return stream;
+
+    }
+    return this.getRemoteStreamForUserId(userId);
+  }
+
+  async _onLocalTracks(resolve, tracks) {
+
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+
+      track.enabled = true;
+      track.track.enabled = true;
+      await game.webrtc.client._roomhandle.addTrack(track);
+
+      this.debug("local track ", track, " added.");
+
+      if ((track.getType() === "audio") &&
+        ((game.webrtc.settings.voiceMode === "ptt") || this.settings.users[game.user.id].muted)) {
+        game.webrtc.disableStreamAudio(this.getStreamForUser(game.userId));
+      } else if ((track.getType() === "video") && (this.settings.users[game.user.id].hidden)) {
+        game.webrtc.disableStreamVideo(this.getStreamForUser(game.userId));
+      }
+
+    }
+
+    resolve(this.getStreamForUser(game.userId));
+  }
+
   setAudioOutput(video, audioSinkId) {
-	  /*
+    /*
 	  const client = game.webrtc.client;
 	  
 	  if (client._remoteTracks != null) {
@@ -336,35 +341,35 @@ class JitsiRTCClient extends WebRTCInterface {
 		  }
 	  }
 	  */
-  
-  }
- 	
-    assignStreamToVideo(stream, video) {
-		this.debug("assignStreamToVideo stream:", stream, " video:", video);
-		
-		if ( stream ) {			
-			
-			try {
-				video.srcObject = stream;
-			} catch (error) {
-				video.src = window.URL.createObjectURL(stream);
-			}
-		
-			if (game.webrtc.client.hasActiveFilter() && $(video).hasClass("local-camera")) {
-				$(video).parent().append( game.webrtc.client.getFilterCanvas() );
-			}	  
-		}
-   }
-  
-	 _onUserLeft(id) {
-		this.debug("user left: ",game.webrtc.client._idCache[id]);
-		 game.webrtc.client._remoteTracks[ id ] = null;	
-		 game.webrtc.client._usernameCache[ game.webrtc.client._idCache[id] ] = null;
-		 game.webrtc.client._idCache[id] = null;
-		 
-		 game.webrtc.onUserStreamChange(game.webrtc.client._idCache[id], null);
 
-	}
+  }
+
+  assignStreamToVideo(stream, video) {
+    this.debug("assignStreamToVideo stream:", stream, " video:", video);
+
+    if (stream) {
+
+      try {
+        video.srcObject = stream;
+      } catch (error) {
+        video.src = window.URL.createObjectURL(stream);
+      }
+
+      if (game.webrtc.client.hasActiveFilter() && $(video).hasClass("local-camera")) {
+        $(video).parent().append(game.webrtc.client.getFilterCanvas());
+      }
+    }
+  }
+
+  _onUserLeft(id) {
+    this.debug("user left: ", game.webrtc.client._idCache[id]);
+    game.webrtc.client._remoteTracks[id] = null;
+    game.webrtc.client._usernameCache[game.webrtc.client._idCache[id]] = null;
+    game.webrtc.client._idCache[id] = null;
+
+    game.webrtc.onUserStreamChange(game.webrtc.client._idCache[id], null);
+
+  }
 
   /* -------------------------------------------- */
 
@@ -374,62 +379,65 @@ class JitsiRTCClient extends WebRTCInterface {
    */
   _loginSuccess(resolve) {
 
-		this._roomhandle = jitsirtc.initJitsiConference(this._room, {
-				openBridgeChannel: true,
-				startSilent: false	,
-				p2p: { 
-					enabled:false
-				}		
-		});
-		this.debug("conference joined: ", this._roomhandle);
-		this._roomhandle.setDisplayName(game.userId);
+    this._roomhandle = jitsirtc.initJitsiConference(this._room, {
+      openBridgeChannel: true,
+      startSilent: false,
+      p2p: {
+        enabled: false
+      }
+    });
+    this.debug("conference joined: ", this._roomhandle);
+    this._roomhandle.setDisplayName(game.userId);
 
-		this._roomhandle.on(JitsiMeetJS.events.conference.CONFERENCE_ERROR , this._onConferenceError);
-		this._roomhandle.on(JitsiMeetJS.events.conference.TRACK_ADDED, this._onRemoteTrack);
-		this._roomhandle.on(JitsiMeetJS.events.conference.TRACK_REMOVED, this._onRemoteTrackRemove);
-		this._roomhandle.on(
-			JitsiMeetJS.events.conference.CONFERENCE_JOINED,
-			this._onConferenceJoined.bind(this, resolve));
-				
-		this._roomhandle.on(JitsiMeetJS.events.conference.USER_JOINED, (id, participant) => {		
-			game.webrtc.client._usernameCache[participant._displayName] = id;
-			game.webrtc.client._idCache[id] = participant._displayName;
-			game.webrtc.client._remoteTracks[id] = [];
-			this.debug("user joined: ", participant._displayName);		
-		});
+    this._roomhandle.on(JitsiMeetJS.events.conference.CONFERENCE_ERROR, this._onConferenceError);
+    this._roomhandle.on(JitsiMeetJS.events.conference.TRACK_ADDED, this._onRemoteTrack);
+    this._roomhandle.on(JitsiMeetJS.events.conference.TRACK_REMOVED, this._onRemoteTrackRemove);
+    this._roomhandle.on(
+      JitsiMeetJS.events.conference.CONFERENCE_JOINED,
+      this._onConferenceJoined.bind(this, resolve));
 
-		this._roomhandle.on(JitsiMeetJS.events.conference.USER_LEFT, this._onUserLeft.bind(this));
-				
-		this._roomhandle.join();
+    this._roomhandle.on(JitsiMeetJS.events.conference.USER_JOINED, (id, participant) => {
+      game.webrtc.client._usernameCache[participant._displayName] = id;
+      game.webrtc.client._idCache[id] = participant._displayName;
+      game.webrtc.client._remoteTracks[id] = [];
+      this.debug("user joined: ", participant._displayName);
+    });
+
+    this._roomhandle.on(JitsiMeetJS.events.conference.USER_LEFT, this._onUserLeft.bind(this));
+
+    this._roomhandle.join();
   }
-	
+
   _onConferenceJoined(resolve) {
-	  this.debug("conference joined event.");
-		resolve(true);
-	}
+    this.debug("conference joined event.");
+    resolve(true);
+  }
 
   _onConferenceError(errorCode) {
-	this.debug("Conference error: ", errorCode);
-	this.webrtc.onError(errorCode);
-	resolve(false);
+    this.debug("Conference error: ", errorCode);
+    this.webrtc.onError(errorCode);
+    resolve(false);
   }
 
-	/**
+  /**
    * Get the list of connected streams
    * The result would be an array of objects in the form of {id, pc, local, remote} where id is the user's ID and remote is
    * the remote user's stream.
    *
    * @return {Array.Object}
    */
-   getConnectedStreams() {
-	  let remoteStreams = [];
-	  for(var u in game.webrtc.client._usernameCache) {
-		  if (u != game.userId) {
-			const id = game.webrtc.client._usernameCache[ u ];			
-			remoteStreams.push( { id: u, remote: game.webrtc.client.getRemoteStreamForId( id ) } );		 
-		  }
-	  }
-	  return remoteStreams;
+  getConnectedStreams() {
+    let remoteStreams = [];
+    for (var u in game.webrtc.client._usernameCache) {
+      if (u != game.userId) {
+        const id = game.webrtc.client._usernameCache[u];
+        remoteStreams.push({
+          id: u,
+          remote: game.webrtc.client.getRemoteStreamForId(id)
+        });
+      }
+    }
+    return remoteStreams;
   }
 
   /* -------------------------------------------- */
@@ -453,7 +461,7 @@ class JitsiRTCClient extends WebRTCInterface {
    * @private
    */
   _setupCustomTURN() {
-    
+
   }
 
   /* -------------------------------------------- */
@@ -465,101 +473,103 @@ class JitsiRTCClient extends WebRTCInterface {
    * @return {Promise.boolean}       Returns success/failure to connect
    */
   async disconnect() {
-	
-	if (jitsirtc) {
-		return new Promise(resolve => {
-		
-			jitsirtc.removeEventListener(
-				JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED,
-				this._loginSuccess.bind(this, resolve));
-			jitsirtc.removeEventListener(
-				JitsiMeetJS.events.connection.CONNECTION_FAILED,
-				this._loginFailure.bind(this, resolve));
-			jitsirtc.removeEventListener(
-				JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED,
-				this._onDisconnect.bind(this));
-			  
-			jitsirtc.disconnect();
-			
-		});
-	} 
+
+    if (jitsirtc) {
+      return new Promise(resolve => {
+
+        jitsirtc.removeEventListener(
+          JitsiMeetJS.events.connection.CONNECTION_ESTABLISHED,
+          this._loginSuccess.bind(this, resolve));
+        jitsirtc.removeEventListener(
+          JitsiMeetJS.events.connection.CONNECTION_FAILED,
+          this._loginFailure.bind(this, resolve));
+        jitsirtc.removeEventListener(
+          JitsiMeetJS.events.connection.CONNECTION_DISCONNECTED,
+          this._onDisconnect.bind(this));
+
+        jitsirtc.disconnect();
+
+      });
+    }
   }
 
-  async initLocalStream(audioSrc, videoSrc, temporary=false) {
+  async initLocalStream(audioSrc, videoSrc, temporary = false) {
     return new Promise(async (resolve) => {
 
-		const withAudio = this._withAudio && audioSrc;
-		const withVideo = this._withVideo && videoSrc;
-		let localtracks = game.webrtc.client.getLocalTracks();
+      const withAudio = this._withAudio && audioSrc;
+      const withVideo = this._withVideo && videoSrc;
+      let localtracks = game.webrtc.client.getLocalTracks();
 
-		let audioFound = false;
-		let videoFound = false;
+      let audioFound = false;
+      let videoFound = false;
 
-		for (let i = 0; i <  localtracks.length; i++) {
-			const track = localtracks[i];
-			if ( track.getType() === "audio") {
-				audioFound = true;
-				if (!withAudio) {
-					this.debug("Audio track dispose");
-					track.dispose();					
-						
-				}
-			}
-			if ( track.getType() === "video") {
-				videoFound = true;
-				if (!withVideo) {
-					this.debug("Video track dispose");
-					track.dispose();
-				}
-			}
-		}
-		
-		let devlist = [];
-		if ( withAudio && !audioFound) devlist.push( 'audio' );
-		if ( withVideo && !videoFound) devlist.push( 'video' );
-		this.debug("Device list for createLocalTracks: ", devlist);
+      for (let i = 0; i < localtracks.length; i++) {
+        const track = localtracks[i];
+        if (track.getType() === "audio") {
+          audioFound = true;
+          if (!withAudio) {
+            this.debug("Audio track dispose");
+            track.dispose();
 
-		if (devlist.length > 0) {
+          }
+        }
+        if (track.getType() === "video") {
+          videoFound = true;
+          if (!withVideo) {
+            this.debug("Video track dispose");
+            track.dispose();
+          }
+        }
+      }
 
-			JitsiMeetJS.createLocalTracks({ devices: devlist,resolution: 240,
-				disableSimulcast: false,				
-				cameraDeviceId : videoSrc,
-				micDeviceId : audioSrc,
-				effects : await game.webrtc.client.getVideoFilter(),
-				constraints: {
-						video: {
-							aspectRatio: 4/3,
-							height: {
-								ideal: 240,
-								max: 480,
-								min: 120
-							},
-							width: {
-								ideal: 320,
-								max: 640,
-								min: 160
-							}
+      let devlist = [];
+      if (withAudio && !audioFound) devlist.push('audio');
+      if (withVideo && !videoFound) devlist.push('video');
+      this.debug("Device list for createLocalTracks: ", devlist);
 
-						}
-					},
-			})
-			.then(await this._onLocalTracks.bind(this,resolve))
-			.catch(error => {
-				throw error;
-			});
-		} else {
-			
-			resolve(this.getStreamForUser(game.userId));
-		}
+      if (devlist.length > 0) {
+
+        JitsiMeetJS.createLocalTracks({
+            devices: devlist,
+            resolution: 240,
+            disableSimulcast: false,
+            cameraDeviceId: videoSrc,
+            micDeviceId: audioSrc,
+            effects: await game.webrtc.client.getVideoFilter(),
+            constraints: {
+              video: {
+                aspectRatio: 4 / 3,
+                height: {
+                  ideal: 240,
+                  max: 480,
+                  min: 120
+                },
+                width: {
+                  ideal: 320,
+                  max: 640,
+                  min: 160
+                }
+
+              }
+            },
+          })
+          .then(await this._onLocalTracks.bind(this, resolve))
+          .catch(error => {
+            throw error;
+          });
+      } else {
+
+        resolve(this.getStreamForUser(game.userId));
+      }
     });
   }
 
-  
-  async closeLocalStream(temporary=false) {
-	  
-    
+
+  async closeLocalStream(temporary = false) {
+
+
   }
-  
+
 
   /* -------------------------------------------- */
   /*  Device Discovery                            */
@@ -571,11 +581,13 @@ class JitsiRTCClient extends WebRTCInterface {
    * @return {Promise.Object}
    */
   async getVideoSources() {
-	  	 
+
     return new Promise(resolve => {
       try {
-		  JitsiMeetJS.mediaDevices.enumerateDevices(list => { resolve(this._deviceInfoToObject(list,'videoinput')) });
-       
+        JitsiMeetJS.mediaDevices.enumerateDevices(list => {
+          resolve(this._deviceInfoToObject(list, 'videoinput'))
+        });
+
       } catch (err) {
         resolve({})
       }
@@ -590,10 +602,10 @@ class JitsiRTCClient extends WebRTCInterface {
    * @return {Promise.Object}
    */
   async getAudioSources() {
-	  	  
+
     return new Promise(resolve => {
       try {
-        JitsiMeetJS.mediaDevices.enumerateDevices(list => resolve(this._deviceInfoToObject(list,'audioinput')));
+        JitsiMeetJS.mediaDevices.enumerateDevices(list => resolve(this._deviceInfoToObject(list, 'audioinput')));
       } catch (err) {
         resolve({})
       }
@@ -614,38 +626,38 @@ class JitsiRTCClient extends WebRTCInterface {
    * @return {Promise.Object}
    */
   async getAudioSinks() {
-	 
-	  return new Promise(resolve => {
+
+    return new Promise(resolve => {
       try {
-        JitsiMeetJS.mediaDevices.enumerateDevices(list => resolve(this._deviceInfoToObject(list,'audiooutput')));
+        JitsiMeetJS.mediaDevices.enumerateDevices(list => resolve(this._deviceInfoToObject(list, 'audiooutput')));
       } catch (err) {
         resolve({})
       }
     });
   }
-  
- /**
+
+  /**
    * Transform the device info array from jitsirtc into an object with {id: label} keys
    * @param {Array} list    The list of devices
    * @private
    */
-  _deviceInfoToObject(list,kind) {
-	
-	  
-	const obj = {};
-	for (let i = 0; i <  list.length; i++) {
-		if ( list[i].kind === kind) {
-			obj[list[i].deviceId] = list[i].label || game.i18n.localize("WEBRTC.UnknownDevice")
-		}
-	}
-	
-	return obj;
-   
-	
+  _deviceInfoToObject(list, kind) {
+
+
+    const obj = {};
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].kind === kind) {
+        obj[list[i].deviceId] = list[i].label || game.i18n.localize("WEBRTC.UnknownDevice")
+      }
+    }
+
+    return obj;
+
+
   }
-  
- 
- 
+
+
+
   /* -------------------------------------------- */
 
   /**
@@ -654,10 +666,13 @@ class JitsiRTCClient extends WebRTCInterface {
    * serve to confuse players.
    * @private
    */
-  _onError({ errorCode, errorText}) {
+  _onError({
+    errorCode,
+    errorText
+  }) {
     this.debug("Error : ", ...arguments);
-   
-      game.webrtc.onError(errorText);
+
+    game.webrtc.onError(errorText);
   }
 
   /* -------------------------------------------- */
@@ -671,7 +686,7 @@ class JitsiRTCClient extends WebRTCInterface {
     game.webrtc.onDisconnect();
   }
 
- 
+
 
   /* -------------------------------------------- */
 
@@ -682,123 +697,120 @@ class JitsiRTCClient extends WebRTCInterface {
    */
   onSettingsChanged(changed) {
 
-/* TODO
-	*/
+    /* TODO
+     */
   }
-  
+
 }
 
-Hooks.on("init", function() {
+Hooks.on("init", function () {
   CONFIG["WebRTC"].clientClass = JitsiRTCClient;
   CONFIG["debug"].avclient = true;
   game.settings.register('jitsiwebrtc', 'mucUrl', {
-	name: 'Jitsi MUC URL',
-	hint: 'config["hosts"]["muc"] in jitsi-meet config.js',
-	default: '',
-	scope: 'world',
-	type: String,
-	config: true,
-	onChange: () => window.location.reload(),
+    name: 'Jitsi MUC URL',
+    hint: 'config["hosts"]["muc"] in jitsi-meet config.js',
+    default: '',
+    scope: 'world',
+    type: String,
+    config: true,
+    onChange: () => window.location.reload(),
   });
   game.settings.register('jitsiwebrtc', 'focusUrl', {
-	name: 'Jitsi Focus URL',
-	hint: 'config["hosts"]["focus"] in jitsi-meet config.js',
-	default: '',
-	scope: 'world',
-	type: String,
-	config: true,
-	onChange: () => window.location.reload(),
+    name: 'Jitsi Focus URL',
+    hint: 'config["hosts"]["focus"] in jitsi-meet config.js',
+    default: '',
+    scope: 'world',
+    type: String,
+    config: true,
+    onChange: () => window.location.reload(),
   });
   game.settings.register('jitsiwebrtc', 'boshUrl', {
-	name: 'Jitsi Bosh URL',
-	hint: 'config["bosh"] in jitsi-meet config.js',
-	default: '',
-	scope: 'world',
-	type: String,
-	config: true,
-	onChange: () => window.location.reload(),
+    name: 'Jitsi Bosh URL',
+    hint: 'config["bosh"] in jitsi-meet config.js',
+    default: '',
+    scope: 'world',
+    type: String,
+    config: true,
+    onChange: () => window.location.reload(),
   });
 });
 
-Hooks.on("setup", function() {
-	
-   WebRTC.prototype.initialize = async function () {
+Hooks.on("setup", function () {
+
+  WebRTC.prototype.initialize = async function () {
     return true;
   };
 
-  
-  WebRTC.prototype.isStreamAudioEnabled = function(stream) { 
-	if (!stream) return false; 
 
-	const tracks = stream.getAudioTracks();
-	return tracks.some(t => t.enabled);
+  WebRTC.prototype.isStreamAudioEnabled = function (stream) {
+    if (!stream) return false;
+
+    const tracks = stream.getAudioTracks();
+    return tracks.some(t => t.enabled);
   };
-  
 
-   WebRTC.prototype.enableMicrophone = function(enable = true) {
+
+  WebRTC.prototype.enableMicrophone = function (enable = true) {
     const stream = this.client.getStreamForUser(game.user.id);
-	const mode = this.settings.voiceMode;
-    if ( ["always", "activity"].includes(mode) ) {		
-		this.enableStreamAudio(stream, enable);
-	}
+    const mode = this.settings.voiceMode;
+    if (["always", "activity"].includes(mode)) {
+      this.enableStreamAudio(stream, enable);
+    }
     this.settings.users[game.user.id].muted = !enable;
   };
 
-  WebRTC.prototype.enableCamera = function(enable = true) {
+  WebRTC.prototype.enableCamera = function (enable = true) {
     let streamInfos = this.client.getConnectedStreams();
     let stream = this.client.getStreamForUser(game.user.id);
-    
+
     this.enableStreamVideo(stream, enable);
   };
 
-  WebRTC.prototype.broadcastMicrophone = function(broadcast) {
-  };
+  WebRTC.prototype.broadcastMicrophone = function (broadcast) {};
 
-  WebRTC.prototype._pttBroadcast = function(stream, broadcast) {
-	  
+  WebRTC.prototype._pttBroadcast = function (stream, broadcast) {
+
     ui.webrtc.setUserIsSpeaking(game.user.id, broadcast);
-	this.enableStreamAudio(stream, !this.settings.users[game.user.id].muted && broadcast);
+    this.enableStreamAudio(stream, !this.settings.users[game.user.id].muted && broadcast);
   };
 
-  WebRTC.prototype.onUserAudioStreamChange = function(userId, stream) {
-	const userSettings = this.settings.users[userId];
+  WebRTC.prototype.onUserAudioStreamChange = function (userId, stream) {
+    const userSettings = this.settings.users[userId];
 
-	if (userSettings.canBroadcastAudio) {
-		
-		if (this.streamHasAudio(stream)) {
-		  const audioLevelHandler = this._onAudioLevel.bind(this, userId);
-		  game.audio.startLevelReports(userId, stream, audioLevelHandler, CONFIG.WebRTC.emitVolumeInterval);
-		}
-		else game.audio.stopLevelReports(userId);
-		this._resetSpeakingHistory(userId);
+    if (userSettings.canBroadcastAudio) {
 
-		if (userSettings.muted) this.disableStreamAudio(stream);		
-		
-	}
-	game.webrtc.client.uiUpdateNeeded();
+      if (this.streamHasAudio(stream)) {
+        const audioLevelHandler = this._onAudioLevel.bind(this, userId);
+        game.audio.startLevelReports(userId, stream, audioLevelHandler, CONFIG.WebRTC.emitVolumeInterval);
+      } else game.audio.stopLevelReports(userId);
+      this._resetSpeakingHistory(userId);
+
+      if (userSettings.muted) this.disableStreamAudio(stream);
+
+    }
+    game.webrtc.client.uiUpdateNeeded();
   }
-  
-  WebRTC.prototype.onUserVideoStreamChange = function(userId, stream) {
+
+  WebRTC.prototype.onUserVideoStreamChange = function (userId, stream) {
     const userSettings = this.settings.users[userId];
     if (userSettings.canBroadcastVideo) {
-		if (userSettings.hidden) this.disableStreamVideo(stream);
-	}
-	game.webrtc.client.uiUpdateNeeded();
+      if (userSettings.hidden) this.disableStreamVideo(stream);
+    }
+    game.webrtc.client.uiUpdateNeeded();
   }
-  
-}); 
 
-Hooks.on("ready", function() {
-	game.webrtc = new JitsiWebRTC(new WebRTCSettings());	
-	
-	let roomid = game.webrtc.settings.getWorldSetting("server.room");
-    if ( roomid == "" ) {
-	  roomid = "fvtt" + (10000000 + Math.floor((Math.random() * 10000000) + 1));
-	  game.webrtc.settings.setWorldSetting("server.room",roomid);
-	}
-	Hooks.callAll("webrtcSetVideoFilter");
+});
 
-	game.webrtc.initialize();
-	
-}); 
-    
+Hooks.on("ready", function () {
+  game.webrtc = new JitsiWebRTC(new WebRTCSettings());
+
+  let roomid = game.webrtc.settings.getWorldSetting("server.room");
+  if (roomid == "") {
+    roomid = "fvtt" + (10000000 + Math.floor((Math.random() * 10000000) + 1));
+    game.webrtc.settings.setWorldSetting("server.room", roomid);
+  }
+  Hooks.callAll("webrtcSetVideoFilter");
+
+  game.webrtc.initialize();
+
+});
