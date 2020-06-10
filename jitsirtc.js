@@ -1,10 +1,6 @@
 let jitsirtc = null;
 
 class JitsiWebRTC extends WebRTC {
-  constructor(settings) {
-    super(settings);
-  }
-
   async initialize() {
     await this.client.initialize();
     return this.connect(this);
@@ -31,7 +27,7 @@ class JitsiRTCClient extends WebRTCInterface {
     const { server } = this._settings.worldSettings;
     this._room = this._settings.worldSettings.server.room;
 
-    if (server.type == 'FVTT') {
+    if (server.type === 'FVTT') {
       this._options = {
         hosts: {
           domain: 'beta.meet.jit.si',
@@ -110,15 +106,15 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
   async getVideoFilter() {
-    if (this._videofilter) return await this._videofilter.getVideoFilter();
+    if (this._videofilter) return this._videofilter.getVideoFilter();
 
     return [];
   }
 
   async initialize() {
     const { mode } = this._settings.worldSettings;
-    this._withAudio = ((mode == 1) || (mode == 3));
-    this._withVideo = ((mode == 2) || (mode == 3));
+    this._withAudio = ((mode === 1) || (mode === 3));
+    this._withVideo = ((mode === 2) || (mode === 3));
 
     this.debug('initialize withAudio: ', this._withAudio, ' withVideo: ', this._withVideo);
 
@@ -140,12 +136,7 @@ class JitsiRTCClient extends WebRTCInterface {
    * @param {string} password        ignored
    * @return {Promise.boolean}       Returns success/failure to connect
    */
-  async connect({
-    host,
-    room,
-    username,
-    password,
-  } = {}) {
+  async connect() {
     return new Promise((resolve) => {
       jitsirtc = new JitsiMeetJS.JitsiConnection(null, null, this._options);
 
@@ -171,7 +162,7 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
   uiUpdateNeeded() {
-    if (ui.webrtc && (ui.webrtc._state == 1)) {
+    if (ui.webrtc && (ui.webrtc._state === 1)) {
       setTimeout(() => {
         game.webrtc.client.uiUpdateNeeded();
       }, 2000);
@@ -228,7 +219,9 @@ class JitsiRTCClient extends WebRTCInterface {
     client.debug('remote track type ', track.getType(), ' removed for participant ', participant);
 
     if (client._remoteTracks[participant] != null) {
-      client._remoteTracks[participant] = client._remoteTracks[participant].filter((value, index, arr) => value.ssrc != track.ssrc);
+      client._remoteTracks[participant] = client._remoteTracks[participant].filter(
+        (value) => value.ssrc !== track.ssrc,
+      );
 
       const userId = client._idCache[participant];
 
@@ -250,7 +243,7 @@ class JitsiRTCClient extends WebRTCInterface {
     const tracks = game.webrtc.client._remoteTracks[id];
 
     if (tracks) {
-      for (let i = 0; i < tracks.length; i++) {
+      for (let i = 0; i < tracks.length; i += 1) {
         stream.addTrack(tracks[i].track);
       }
       game.webrtc.enableStreamVideo(stream);
@@ -272,7 +265,7 @@ class JitsiRTCClient extends WebRTCInterface {
       const stream = new MediaStream();
       const tracks = game.webrtc.client.getLocalTracks();
 
-      for (let i = 0; i < tracks.length; i++) {
+      for (let i = 0; i < tracks.length; i += 1) {
         stream.addTrack(tracks[i].track);
       }
       return stream;
@@ -281,56 +274,44 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
   async _onLocalTracks(resolve, tracks) {
-    for (let i = 0; i < tracks.length; i++) {
+    const addedTracks = [];
+    for (let i = 0; i < tracks.length; i += 1) {
       const track = tracks[i];
 
       track.enabled = true;
       track.track.enabled = true;
-      await game.webrtc.client._roomhandle.addTrack(track);
+      addedTracks.push(game.webrtc.client._roomhandle.addTrack(track).then(() => {
+        this.debug('local track ', track, ' added.');
 
-      this.debug('local track ', track, ' added.');
-
-      if ((track.getType() === 'audio')
-        && ((game.webrtc.settings.voiceMode === 'ptt') || this.settings.users[game.user.id].muted)) {
-        game.webrtc.disableStreamAudio(this.getStreamForUser(game.userId));
-      } else if ((track.getType() === 'video') && (this.settings.users[game.user.id].hidden)) {
-        game.webrtc.disableStreamVideo(this.getStreamForUser(game.userId));
-      }
+        if ((track.getType() === 'audio')
+          && ((game.webrtc.settings.voiceMode === 'ptt') || this.settings.users[game.user.id].muted)) {
+          game.webrtc.disableStreamAudio(this.getStreamForUser(game.userId));
+        } else if ((track.getType() === 'video') && (this.settings.users[game.user.id].hidden)) {
+          game.webrtc.disableStreamVideo(this.getStreamForUser(game.userId));
+        }
+      }));
     }
+
+    // Wait for all tracks to be added
+    await Promise.all(addedTracks);
 
     resolve(this.getStreamForUser(game.userId));
   }
 
-  setAudioOutput(video, audioSinkId) {
-    /*
-	  const client = game.webrtc.client;
-
-	  if (client._remoteTracks != null) {
-		  for(var p in client._remoteTracks) {
-			  const t = client._remoteTracks[p];
-			  if ( (t != null) && (t.length > 0)) {
-				  for (let i = 0; i <  t.length; i++) {
-					  if (t[i].getType() === "audio") {
-
-						   t[i].setAudioOutput(audioSinkId).then( () => {
-						   console.log("Jitsi: AudioOutput set " + t[i].getParticipantId() + ":" +  t[i].getId() + ":" + audioSinkId);});
-					  }
-				  }
-			  }
-		  }
-	  }
-	  */
-
+  setAudioOutput() {
+    // TODO
   }
 
   assignStreamToVideo(stream, video) {
     this.debug('assignStreamToVideo stream:', stream, ' video:', video);
 
+    const streamVideo = video;
+
     if (stream) {
       try {
-        video.srcObject = stream;
+        streamVideo.srcObject = stream;
       } catch (error) {
-        video.src = window.URL.createObjectURL(stream);
+        streamVideo.src = window.URL.createObjectURL(stream);
       }
 
       if (game.webrtc.client.hasActiveFilter() && $(video).hasClass('local-camera')) {
@@ -393,27 +374,27 @@ class JitsiRTCClient extends WebRTCInterface {
   _onConferenceError(errorCode) {
     this.debug('Conference error: ', errorCode);
     this.webrtc.onError(errorCode);
-    resolve(false);
   }
 
   /**
    * Get the list of connected streams
-   * The result would be an array of objects in the form of {id, pc, local, remote} where id is the user's ID and remote is
-   * the remote user's stream.
+   * The result would be an array of objects in the form of {id, pc, local, remote}
+   * where id is the user's ID, pc is the RTCPeerConnection object associated to the peer,
+   * local is the local stream added to the call and remote is the remote user's stream
    *
    * @return {Array.Object}
    */
   getConnectedStreams() {
     const remoteStreams = [];
-    for (const u in game.webrtc.client._usernameCache) {
-      if (u != game.userId) {
-        const id = game.webrtc.client._usernameCache[u];
+    Object.keys(game.webrtc.client._usernameCache).forEach((userName) => {
+      if (userName !== game.userId) {
+        const id = game.webrtc.client._usernameCache[userName];
         remoteStreams.push({
-          id: u,
+          id: userName,
           remote: game.webrtc.client.getRemoteStreamForId(id),
         });
       }
-    }
+    });
     return remoteStreams;
   }
 
@@ -427,17 +408,6 @@ class JitsiRTCClient extends WebRTCInterface {
     this.debug('Login ERROR ', errorCode, message);
     this.webrtc.onError(message);
     resolve(false);
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Setup the custom TURN relay to be used in subsequent calls if there is one configured
-   * If configured, setup custom TURN configuration for future calls. Turn credentials are mandatory in WebRTC.
-   * @private
-   */
-  _setupCustomTURN() {
-
   }
 
   /* -------------------------------------------- */
@@ -467,10 +437,13 @@ class JitsiRTCClient extends WebRTCInterface {
         jitsirtc.disconnect();
       });
     }
+
+    return null;
   }
 
-  async initLocalStream(audioSrc, videoSrc, temporary = false) {
-    return new Promise(async (resolve) => {
+  async initLocalStream(audioSrc, videoSrc) {
+    const videoEffects = await game.webrtc.client.getVideoFilter();
+    return new Promise((resolve) => {
       const withAudio = this._withAudio && audioSrc;
       const withVideo = this._withVideo && videoSrc;
       const localtracks = game.webrtc.client.getLocalTracks();
@@ -478,7 +451,7 @@ class JitsiRTCClient extends WebRTCInterface {
       let audioFound = false;
       let videoFound = false;
 
-      for (let i = 0; i < localtracks.length; i++) {
+      for (let i = 0; i < localtracks.length; i += 1) {
         const track = localtracks[i];
         if (track.getType() === 'audio') {
           audioFound = true;
@@ -508,7 +481,7 @@ class JitsiRTCClient extends WebRTCInterface {
           disableSimulcast: false,
           cameraDeviceId: videoSrc,
           micDeviceId: audioSrc,
-          effects: await game.webrtc.client.getVideoFilter(),
+          effects: videoEffects,
           constraints: {
             video: {
               aspectRatio: 4 / 3,
@@ -526,7 +499,7 @@ class JitsiRTCClient extends WebRTCInterface {
             },
           },
         })
-          .then(await this._onLocalTracks.bind(this, resolve))
+          .then(this._onLocalTracks.bind(this, resolve))
           .catch((error) => {
             throw error;
           });
@@ -537,11 +510,9 @@ class JitsiRTCClient extends WebRTCInterface {
   }
 
 
-  async closeLocalStream(temporary = false) {
-
-
+  async closeLocalStream() {
+    // TODO
   }
-
 
   /* -------------------------------------------- */
   /*  Device Discovery                            */
@@ -549,7 +520,8 @@ class JitsiRTCClient extends WebRTCInterface {
 
   /**
    * Get the list of available video sources.
-   * The expected result is an object with the device id as key and its human-readable label as value.
+   * The expected result is an object with the device id as key and its human-readable label as
+   * value.
    * @return {Promise.Object}
    */
   async getVideoSources() {
@@ -568,7 +540,8 @@ class JitsiRTCClient extends WebRTCInterface {
 
   /**
    * Get the list of available audio sources.
-   * The expected result is an object with the device id as key and its human-readable label as value.
+   * The expected result is an object with the device id as key and its human-readable label as
+   * value.
    * @return {Promise.Object}
    */
   async getAudioSources() {
@@ -585,11 +558,12 @@ class JitsiRTCClient extends WebRTCInterface {
 
   /**
    * Get the list of available audio output devices
-   * The expected result is an object with the device id as key and its human-readable label as value
+   * The expected result is an object with the device id as key and its human-readable label as
+   * value
    *
    * Note: This feature is not supported by Firefox by default as it depends on the enumerateDevices
-   * API which doesn't list output devices on Firefox 63+ unless the media.setsinkid.enabled settings
-   * is enabled.
+   * API which doesn't list output devices on Firefox 63+ unless the media.setsinkid.enabled
+   * settings is enabled.
    * See https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/enumerateDevices
    *
    * @return {Promise.Object}
@@ -611,7 +585,7 @@ class JitsiRTCClient extends WebRTCInterface {
    */
   _deviceInfoToObject(list, kind) {
     const obj = {};
-    for (let i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i += 1) {
       if (list[i].kind === kind) {
         obj[list[i].deviceId] = list[i].label || game.i18n.localize('WEBRTC.UnknownDevice');
       }
@@ -625,15 +599,15 @@ class JitsiRTCClient extends WebRTCInterface {
 
   /**
    * Generic error callback.
-   * Filter out bad ice candidate errors since they can happen often for various reasons and reporting them can only
-   * serve to confuse players.
+   * Filter out bad ice candidate errors since they can happen often for various reasons and
+   * reporting them can only serve to confuse players.
    * @private
    */
   _onError({
     errorCode,
     errorText,
   }) {
-    this.debug('Error : ', ...arguments);
+    this.debug('Error : ', { errorCode, errorText });
 
     game.webrtc.onError(errorText);
   }
@@ -644,8 +618,8 @@ class JitsiRTCClient extends WebRTCInterface {
    * Called when the connection to the signaling server is lost
    * @private
    */
-  _onDisconnect() {
-    this.debug('Disconnected', ...arguments);
+  _onDisconnect(...args) {
+    this.debug('Disconnected', args);
     game.webrtc.onDisconnect();
   }
 
@@ -657,7 +631,7 @@ class JitsiRTCClient extends WebRTCInterface {
    * This can be used to act according
    * @param {Object} changed     Object consisting of the changed settings in the form {key: value}
    */
-  onSettingsChanged(changed) {
+  onSettingsChanged() {
 
     /* TODO
      */
@@ -697,12 +671,12 @@ Hooks.on('init', () => {
 });
 
 Hooks.on('setup', () => {
-  WebRTC.prototype.initialize = async function () {
+  WebRTC.prototype.initialize = async function initialize() {
     return true;
   };
 
 
-  WebRTC.prototype.isStreamAudioEnabled = function (stream) {
+  WebRTC.prototype.isStreamAudioEnabled = function isStreamAudioEnabled(stream) {
     if (!stream) return false;
 
     const tracks = stream.getAudioTracks();
@@ -710,7 +684,7 @@ Hooks.on('setup', () => {
   };
 
 
-  WebRTC.prototype.enableMicrophone = function (enable = true) {
+  WebRTC.prototype.enableMicrophone = function enableMicrophone(enable = true) {
     const stream = this.client.getStreamForUser(game.user.id);
     const mode = this.settings.voiceMode;
     if (['always', 'activity'].includes(mode)) {
@@ -719,27 +693,31 @@ Hooks.on('setup', () => {
     this.settings.users[game.user.id].muted = !enable;
   };
 
-  WebRTC.prototype.enableCamera = function (enable = true) {
-    const streamInfos = this.client.getConnectedStreams();
+  WebRTC.prototype.enableCamera = function enableCamera(enable = true) {
     const stream = this.client.getStreamForUser(game.user.id);
 
     this.enableStreamVideo(stream, enable);
   };
 
-  WebRTC.prototype.broadcastMicrophone = function (broadcast) {};
+  WebRTC.prototype.broadcastMicrophone = function broadcastMicrophone() {};
 
-  WebRTC.prototype._pttBroadcast = function (stream, broadcast) {
+  WebRTC.prototype._pttBroadcast = function _pttBroadcast(stream, broadcast) {
     ui.webrtc.setUserIsSpeaking(game.user.id, broadcast);
     this.enableStreamAudio(stream, !this.settings.users[game.user.id].muted && broadcast);
   };
 
-  WebRTC.prototype.onUserAudioStreamChange = function (userId, stream) {
+  WebRTC.prototype.onUserAudioStreamChange = function onUserAudioStreamChange(userId, stream) {
     const userSettings = this.settings.users[userId];
 
     if (userSettings.canBroadcastAudio) {
       if (this.streamHasAudio(stream)) {
         const audioLevelHandler = this._onAudioLevel.bind(this, userId);
-        game.audio.startLevelReports(userId, stream, audioLevelHandler, CONFIG.WebRTC.emitVolumeInterval);
+        game.audio.startLevelReports(
+          userId,
+          stream,
+          audioLevelHandler,
+          CONFIG.WebRTC.emitVolumeInterval,
+        );
       } else game.audio.stopLevelReports(userId);
       this._resetSpeakingHistory(userId);
 
@@ -748,7 +726,7 @@ Hooks.on('setup', () => {
     game.webrtc.client.uiUpdateNeeded();
   };
 
-  WebRTC.prototype.onUserVideoStreamChange = function (userId, stream) {
+  WebRTC.prototype.onUserVideoStreamChange = function onUserVideoStreamChange(userId, stream) {
     const userSettings = this.settings.users[userId];
     if (userSettings.canBroadcastVideo) {
       if (userSettings.hidden) this.disableStreamVideo(stream);
@@ -761,7 +739,7 @@ Hooks.on('ready', () => {
   game.webrtc = new JitsiWebRTC(new WebRTCSettings());
 
   let roomid = game.webrtc.settings.getWorldSetting('server.room');
-  if (roomid == '') {
+  if (roomid === '') {
     roomid = `fvtt${10000000 + Math.floor((Math.random() * 10000000) + 1)}`;
     game.webrtc.settings.setWorldSetting('server.room', roomid);
   }
