@@ -155,16 +155,6 @@ class JitsiRTCClient extends WebRTCInterface {
     });
   }
 
-  uiUpdateNeeded() {
-    if (ui.webrtc && (ui.webrtc._state === 1)) {
-      setTimeout(() => {
-        game.webrtc.client.uiUpdateNeeded();
-      }, 2000);
-    } else {
-      ui.webrtc.render(true);
-    }
-  }
-
   /**
    * Handles incoming remote track
    * @param track JitsiTrack object
@@ -238,6 +228,7 @@ class JitsiRTCClient extends WebRTCInterface {
       addedTracks.push(game.webrtc.client._roomhandle.addTrack(track).then(() => {
         this.debug('local track ', track, ' added.');
 
+        track.track.jitsiTrack = track;
         stream.addTrack(track.track);
 
         if (track.getType() === 'audio') {
@@ -292,6 +283,18 @@ class JitsiRTCClient extends WebRTCInterface {
     game.webrtc.client._idCache[id] = null;
 
     game.webrtc.onUserStreamChange(game.webrtc.client._idCache[id], null);
+  }
+
+  muteStreamAudio(stream, mute) {
+    stream.getAudioTracks().forEach((track) => (
+      mute ? track.jitsiTrack.mute() : track.jitsiTrack.unmute()
+    ));
+  }
+
+  async muteStreamVideo(stream, mute) {
+    stream.getVideoTracks().forEach((track) => (
+      mute ? track.jitsiTrack.mute() : track.jitsiTrack.unmute()
+    ));
   }
 
   /* -------------------------------------------- */
@@ -609,6 +612,7 @@ class JitsiRTCClient extends WebRTCInterface {
 Hooks.on('init', () => {
   CONFIG.WebRTC.clientClass = JitsiRTCClient;
   CONFIG.debug.avclient = true;
+
   game.settings.register('jitsiwebrtc', 'mucUrl', {
     name: 'Jitsi MUC URL',
     hint: 'config["hosts"]["muc"] in jitsi-meet config.js',
@@ -636,6 +640,28 @@ Hooks.on('init', () => {
     config: true,
     onChange: () => window.location.reload(),
   });
+});
+
+Hooks.on('setup', () => {
+  WebRTC.prototype._pttBroadcast = function _pttBroadcast(stream, broadcast) {
+    this._broadcastingAudio = broadcast;
+    ui.webrtc.setUserIsSpeaking(game.user.id, this._broadcastingAudio);
+    this.broadcastMicrophone(!this.settings.users[game.user.id].muted && this._broadcastingAudio);
+  };
+
+  /**
+   * Checks if a stream has any audio tracks enabled
+   * @param {MediaStream} stream    The stream to check
+   * @return {Boolean}
+   */
+  WebRTC.prototype.isStreamAudioEnabled = function isStreamAudioEnabled(stream) {
+    if (stream === this.client.getStreamForUser(game.user.id)) {
+      return !this.settings.users[game.user.id].muted;
+    }
+
+    const tracks = stream ? stream.getAudioTracks() : [];
+    return tracks.some((t) => t.enabled);
+  };
 });
 
 Hooks.on('ready', () => {
